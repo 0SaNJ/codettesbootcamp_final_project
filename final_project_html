@@ -1,0 +1,215 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insyg</title>
+    <script src="public/mqttws31.js" type="text/javascript"></script>
+    <script src="public/fetch"></script>
+    <script src="public/jquery.min.js" type="text/javascript"></script>
+    <script src="public/config.js" type="text/javascript"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="banner" style="z-index: 1;">
+        <div class="topnav" style="z-index: 3;">
+            <div class="signature">
+                <img src="./logo-test-insyg.png" class="sig-img">
+                <h3 class="sig-text">insyg</h3>
+            </div>
+            <div style="width: 30%"></div>
+            <div class="navButtons">
+                <button class="button" id="store"><a style="text-decoration: none;" href="store.html"><h3 class="btn-text">store</h3></a></button>
+                <button class="button" id="services"><a href="#services" style="text-decoration: none;"><h3 class="btn-text">services</h3></a></button>
+            </div>
+        </div>
+        <div class="banner-test">
+    </div>
+    <div class="content" id="content">
+        <div class="hat-info-box" style="z-index: 2;">
+            <h3 class="hat-text"> 
+                Revolutionize your health routine with the Smart Health Hat – a sleek fusion of fashion and advanced health tech. This innovative hat features a heart rate sensor, temperature, and humidity monitor, providing real-time health data discreetly. Stay in tune with your body's signals while enjoying unparalleled style. The Smart Health Hat seamlessly integrates into your daily life, enhancing your wellness journey effortlessly. Elevate your lifestyle, prioritize health, and embrace the future of wearable technology. </h3>
+            <img src="./hat image.png"  class="hat-img">
+    </div>
+    <div class="example-info">
+        <div class="chartboxpage">
+            <div class="chartpage" id="chart-container"></div>
+            </div>   
+              <div class="chartboxpage">
+                <div class="chartpage2" id="chart-container2"></div>
+              </div>
+
+                 <h3 class="chart-text" style="text-align: right;">Hello</br>
+                Here you can find info of your temp and humid in a chart </h3>
+    </div>
+    </div>
+    <div class="creds"></div>
+</body>
+</html>
+<script type="text/javascript">
+  var mqtt;
+  var reconnectTimeout = 2000;
+  
+  function MQTTconnect() {
+      if (typeof path == "undefined") {
+          path = '/mqtt';
+      }
+      mqtt = new Paho.MQTT.Client(
+          host,
+          port,
+          path,
+          "web_" + parseInt(Math.random() * 100, 10)
+      );
+      var options = {
+          timeout: 3,
+          useSSL: useTLS,
+          cleanSession: cleansession,
+          onSuccess: onConnect,
+          onFailure: function (message) {
+              $('#status').val("Connection failed: " + message.errorMessage + "Retrying");
+              setTimeout(MQTTconnect, reconnectTimeout);
+          }
+      };
+  
+      mqtt.onConnectionLost = onConnectionLost;
+      mqtt.onMessageArrived = onMessageArrived;
+  
+      if (username != null) {
+          options.userName = username;
+          options.password = password;
+      }
+      console.log("Host=" + host + ", port=" + port + ", path=" + path + " TLS = " + useTLS + " username=" + username + " password=" + password);
+      mqtt.connect(options);
+  }
+  
+  function onConnect() {
+      $('#status').val('Connected to ' + host + ':' + port + path);
+      // Connection succeeded; subscribe to our topic
+      mqtt.subscribe(topic, { qos: 0 });
+      $('#topic').val(topic);
+  
+      // Set up chart
+      chart = Highcharts.chart('chart-container', {
+          chart: {
+              type: 'line',
+              backgroundColor: 'rgba(0,0,0,0)'
+          },
+          title: {
+              text: 'Sensor Data',
+              style: {
+                color: '#00000'
+              }
+          },
+          xAxis: {
+              type: 'datetime',
+              title: {
+                  text: 'Time',
+                  style: {
+                color: '#00000'
+              }
+              }
+          },
+          yAxis: [{
+              title: {
+                  text: 'Temp',
+                  style: {
+                color: '#00000'
+              }
+              }
+          }, {
+              title: {
+                  text: 'Humid',
+                  style: {
+                color: '#00000'
+              }
+              },
+              gridLineColor: '#00000',
+              opposite: false // display on opposite side of chart
+          }],
+          series: [{
+              name: 'Temp',
+              data: [],
+              yAxis: 0 // use the first yAxis (index 0) for this series
+          }, {
+              name: 'Humid',
+              data: [],
+              yAxis: 1 // use the second yAxis (index 1) for this series
+          }]
+      });
+  
+      // Set up second chart with heartbeat data
+      chart2 = Highcharts.chart('chart-container2', {
+          chart: {
+              type: 'line', // Set chart type to spline
+              backgroundColor: 'rgba(0,0,0,0)'
+          },
+          title: {
+              text: 'Heartbeat Data over Time',
+              style: {
+                color: '#00000'
+              }
+          },
+          xAxis: {
+              type: 'datetime', // Use linear type for the x-axis
+              title: {
+                  text: 'Time',
+                  style: {
+                    color: '#00000'
+                  }
+              }
+          },
+          yAxis: {
+              title: {
+                  text: 'Heartbeat',
+                  style: {
+                    color: '#00000'
+                  }
+              },
+          },
+          series: [{
+              name: 'Heartbeat',
+              data: [], // Your heartbeat data here
+              color: '#FF0000'
+          }]
+      });
+  }
+  
+  function onConnectionLost(response) {
+      setTimeout(MQTTconnect, reconnectTimeout);
+      $('#status').val("connection lost: " + response.errorMessage + ". Reconnecting");
+  };
+  
+  function onMessageArrived(message) {
+      var topic = message.destinationName;
+      var payload = message.payloadString;
+  
+      $('#ws').prepend('<li>' + topic + ' = ' + payload + '</li>');
+  
+      // Parse message data
+      var data = JSON.parse(payload);
+  
+      // Update first chart
+      chart.series[0].addPoint([Date.now(), data.temp]);
+      chart.series[1].addPoint([Date.now(), data.humid]);
+  
+      // Update second chart with heartbeat data
+      chart2.series[0].addPoint([Date.now(), data.HB]);
+  
+      // Redraw both charts
+      chart.redraw();
+      chart2.redraw();
+  
+      // WIDGET
+      const widgetContainers = document.querySelectorAll('.widget-container');
+  
+      // Loop through each widget container and update the widget data
+      widgetContainers.forEach(widgetElement => {
+          widgetElement.querySelector('.temp-data').textContent = data.temp;
+          widgetElement.querySelector('.humid-data').textContent = data.humid;
+      });
+  };
+  
+  $(document).ready(function () {
+      MQTTconnect();
+  });
+</script>
