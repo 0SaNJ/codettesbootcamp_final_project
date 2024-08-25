@@ -1,150 +1,292 @@
-body{
-    margin:0;
-    padding:0;
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
     overflow-y: scroll;
-    background: black;
+
 }
 
-.banner{
-    width:100%;
-    height: 400px;
-    position: relative;
-}
-
-.topnav{
-    width:100%;
-    height: 18%;
-    background:transparent;
+.navbar {
+    background-color: #dd5e0e;
+    padding: 15px;
+    color: white;
     display: flex;
-    flex-direction: row;
-    position: relative;
-    z-index:4;
-    position: absolute;
-}
-
-.banner-test{
-    width:100%;
-    height: 100%;
-    background:orange;
-    z-index: -2;
-    position: absolute;
-    display: flex;
-    justify-content: right;
-    flex-direction: row;
-}
-
-.signature{
-    width: 30%;
-    height: 100%;
-    display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 
-.sig-text{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    font-size: 33px;
-    font-weight: 500;
+.brand-title {
+    font-size: 1.5rem;
 }
 
-.sig-img{
-    height: 80%;
-    max-width: 80%;
-    margin-left: 3%;
-    margin-right: 2%;
+.toggle-button {
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 
-.navButtons{
-    width:40%;
-    height:100%;
-    position: relative;
-    display: flex;
-    align-items: right;
-    justify-content: right;
+.toggle-button .bar {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    margin: 5px auto;
 }
 
-.button{
-    width:150px;
-    height: 50%;
-    border-style: solid;
-    border-color: black;
-    border-width: 3px;
-    border-radius: 10px;
-    margin-top: auto;
-    margin-bottom: auto;
-    margin-right:  3%;
-    background: transparent;
+.profile-sidebar {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    top: 0;
+    right: 0;
+    background-color: #dd5e0e;
+    overflow-x: hidden;
+    padding-top: 60px;
+    transition: width 0.5s;
+    pointer-events: none;
+    /* Disable pointer events during transition */
+    z-index: 2;
+    /* Ensure profile sidebar appears above other content */
+}
+
+
+.profile-sidebar.active {
+    width: 250px;
+    /* Slide out the sidebar when active */
+    pointer-events: auto;
+    /* Re-enable pointer events when sidebar is fully visible */
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 36px;
+    color: #ff8234;
+    cursor: pointer;
+}
+
+.profile-details {
     text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 20px;
+    max-width: 250px;
+    /* Adjust the maximum width to fit the weight input box */
+    margin: auto;
+    /* Center the container horizontally */
 }
 
-.btn-text{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    font-size: 18px;
+#weight {
+    width: 100%;
+    /* Make the input box fill the available width */
+    box-sizing: border-box;
+    /* Include padding and border in the width calculation */
+}
+
+.profile-details img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+}
+
+.profile-details h2 {
+    margin-bottom: 10px;
     color: white;
 }
 
-.content{
-    height: 1000px;
-    position: relative;
+.profile-details p {
+    margin-bottom: 5px;
+    color: white;
 }
 
-.hat-info-box {
-    position: relative;
-    justify-content:right;
+.profile-details button {
+    padding: 10px 20px;
+    background-color: #ff8234;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.profile-details button:hover {
+    background-color: #777;
+}
+
+.info-container {
     display: flex;
-    z-index: 5;
-    width: 100%;
-    height: 50%;
-}
-
-.hat-img {
-    height: 100%;
-}
-
-.hat-text {
-    position: relative;
-    top: 150px;
-    margin-right:480px;
-}
-
-.example-info {
-    position: relative;
-    justify-content:right;
-    display: flex;
-    z-index: 5;
-    width: 100%;
-    height: 50%;
-    background-color: orange;
+    flex-direction: column;
+    height: 400px;
+    justify-content: center;
     align-items: center;
-}
-
-.chartboxpage {
-    background-color: transparent;
-    width: 30%;
-    margin: 0px;
-    box-sizing: border-box;
     padding: 20px;
-    border: 1px;
-    border-radius: 10px;  
-    position: relative;
-    display: flex;
-    height: 50%;
-} 
-
-.chartpge {
-    display: flex;
-    position: relative;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.chart-text {
-    width: 80%;
+.chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    height: 300px;
+    z-index: 1;
 }
 
+.analog-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 300px;
+    height: 100px;
+    margin-bottom: 10px;
+}
 
-.web-info-box {
-    background-color: orange;
-    width: 100%;
-    height: 50px;
+.diagnosis-history {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 400px;
+    height: 400px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.diagnosis-history .history-container {
+    display: flex;
+    justify-content: space-between;
+    background-color: white;
+    width: 300px;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.diagnosis-history .H3 {
+    display: flex;
+    height: 25px;
+    justify-content: center;
+    color: #333;
+    z-index: 1;
+}
+
+.timeline {
+    list-style-type: none;
+    padding: 0;
+}
+
+.timeline li {
+    margin: 10px 0;
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline li:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    background-color: #333;
+    border-radius: 50%;
+}
+
+.body-image {
+    position: inherit;
+    text-align: center;
+}
+
+.body-image img {
+    max-width: 100%;
+}
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.info-container,
+.diagnosis-history {
+    flex: 1;
+    /* Adjusts width to distribute space evenly */
+    margin: 10px;
+    padding: 20px;
+    background-color: #f0f0f0;
+    box-sizing: border-box;
+}
+
+.diagnosis-history ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.diagnosis-history ul li {
+    margin: 5px 0;
+}
+
+.body-image img {
+    max-width: 100%;
+    height: auto;
+}
+
+#result {
+    margin-top: 20px;
+}
+
+#history {
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+/* Media Query for Mobile Devices */
+@media only screen and (max-width: 768px) {
+    .profile-details {
+        max-width: 100%;
+        /* Adjust the maximum width to fit the weight input box */
+    }
+
+    .analog-box {
+        width: 100%;
+        /* Set the width to 100% for full width on mobile devices */
+        margin: 20px 0;
+        /* Adjust margin for better spacing */
+    }
+
+    .history-container {
+        flex-direction: column;
+        /* Stack elements vertically on mobile */
+        align-items: center;
+        /* Center align the items */
+        width: 100%;
+        /* Take full width on mobile devices */
+    }
+
+    .container {
+        flex-direction: column;
+        /* Stack the main containers vertically on mobile */
+        padding: 10px;
+    }
+
+    .analog-container,
+    .diagnosis-history {
+        margin: 10px 0;
+        /* Add vertical margin between the containers */
+        padding: 10px;
+    }
 }
