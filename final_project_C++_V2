@@ -1,0 +1,202 @@
+#include <AsyncTCP.h>
+
+#include <ESPAsyncWebServer.h>
+#include <Adafruit_Sensor.h>
+#include <WiFi.h>
+#include <SPIFFS.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include "MAX30105.h"
+#include "spo2_algorithm.h"
+#include "heartRate.h"
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// MQTT
+const char *mqtt_broker = "192.168.1.12";
+const char *mqtt_topic = "jaysanmo/codettes/01";  // CHANGE SensorID here!
+const char *mqtt_User = "";
+const char *mqtt_Password = "";
+
+// Replace with your network credentials
+const char *ssid = "Team09";          //"HUAWEI-2.4G-yzad";//"HUAWEI-2.4G-2ta4";
+const char *password = "H@ckTe@m)(";  //"SkNH972g";      //"nC2gGR9S";
+
+MAX30105 particleSensor;
+
+#define MAX_BRIGHTNESS 255
+
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
+uint16_t irBuffer[100];   // infrared LED sensor data
+uint16_t redBuffer[100];  // red LED sensor data
+#else
+uint32_t irBuffer[100];   // infrared LED sensor data
+uint32_t redBuffer[100];  // red LED sensor data
+#endif
+
+int32_t bufferLength;   // data length
+int32_t spo2;           // SPO2 value
+int8_t validSPO2;       // indicator to show if the SPO2 calculation is valid
+int32_t heartRate;      // heart rate value
+int8_t validHeartRate;  // indicator to show if the heart rate calculation is valid
+
+float temperatureC;  // temperature in Celsius
+float temperatureF;  // temperature in Fahrenheit
+
+// Variables to manage update frequency
+unsigned long lastUpdate = 0;
+const unsigned long updateInterval = 500;  // Update every 500 milliseconds
+
+
+
+void setup() {
+  Serial.begin(115200);
+  //pulseSensor.setup();
+  //dhtSensor.setup();
+
+  // Initialize SPIFFS
+  if (!SPIFFS.begin()) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  WiFi.setSleep(false);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
+  }
+
+  // Print ESP32 Local IP Address
+  Serial.println(WiFi.localIP());
+
+  // MQTT
+  client.setServer(mqtt_broker, 1883);
+  if (initMqtt()) {
+    client.publish("jaysanmo/codettes/01", "Hello from ESP32");
+  }
+
+  // Initialize sensor
+  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+    Serial.println(F("MAX30105 was not found. Please check wiring/power."));
+    while (1)
+      ;
+  }
+  particleSensor.setup();  // Use default settings
+
+  particleSensor.setPulseAmplitudeRed(0x0A);  // Turn Red LED to low to indicate sensor is running
+  particleSensor.setPulseAmplitudeGreen(0);   // Turn off Green LED
+
+  // Enable temperature sensor
+  particleSensor.enableDIETEMPRDY();
+}
+
+
+
+unsigned long lastMqttTime = millis();
+const unsigned long Mqtt_INTERVAL_MS = 2000;
+
+void loop() {
+  client.loop();
+
+  // Send regular MQTT data
+  if ((millis() - lastMqttTime) > Mqtt_INTERVAL_MS) {
+    if (client.connected()) {
+      handle_MqttData();
+      lastMqttTime = millis();
+    } else {
+      initMqtt();
+    }
+  }
+
+
+  bufferLength = 100;  // Buffer length of 100 stores 4 seconds of samples at 25 sps
+
+  // Read the first 100 samples, determine the signal range
+  for (byte i = 0; i < bufferLength; i++) {
+    while (particleSensor.available() == false) particleSensor.check();
+    redBuffer[i] = particleSensor.getRed();
+    irBuffer[i] = particleSensor.getIR();
+    particleSensor.nextSample();
+  }
+
+  // Calculate heart rate and SpO2
+  maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+
+  // Read temperature
+  temperatureC = particleSensor.readTemperature();
+  temperatureF = particleSensor.readTemperatureF();
+  /*// CLI
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    processCommand(command);
+  }*/
+}
+
+/*void processCommand(char command) {
+  switch (command) {
+    case 'R':
+      //pulseSensor.setup();
+      //dhtSensor.setup();
+      Serial.println("Pulse Sensor and DHT Sensor setup complete.");
+      break;
+
+    case 'D':
+      Serial.println("Pulse Sensor Data:");
+      Serial.println("Raw Signal Value: " + String(pulseSensor.getBeatsPerMinute(0)));
+      Serial.println("Beats Per Minute: " + String(pulseSensor.getBeatsPerMinute(1)));
+
+      Serial.println("DHT Sensor Data:");
+      Serial.println("Humidity: " + String(dhtSensor.getHumidity()) + "%");
+      Serial.println("Temperature: " + String(dhtSensor.getTemperature()) + "°C");
+      break;
+
+    default:
+      Serial.println("Invalid command. Available commands: R (Setup Sensors), D (Display Sensor Data)");
+  }  
+}*/
+
+bool initMqtt() {
+  if (!client.connected()) {
+    Serial.println("Connecting to MQTT...");
+
+    if (client.connect("ESP32Client", mqtt_User, mqtt_Password)) {
+      Serial.println("Connected");
+      return true;
+    } else {
+      Serial.print("Failed with state ");
+      Serial.print(client.state());
+      delay(2000);
+      return false;
+    }
+  }
+}
+
+void handle_MqttData() {
+
+  //Serial.print("temperatureC=");
+  //Serial.print(temperature, 4);
+
+
+
+  StaticJsonDocument<1023> doc;
+  doc["temp"] = temperatureC;
+  doc["spo2"] = spo2;
+  doc["HB"] = heartRate;
+  //doc["dht_humid"] = ;
+  //doc["dht_temp"] = t;
+
+  char out[128];
+  int b = serializeJson(doc, out);
+  serializeJson(doc, Serial);
+  Serial.print("bytes -> ");
+  Serial.print(b, DEC);
+
+  // Publish the data to MQTT
+  client.publish((char *)mqtt_topic, out) ? Serial.println(" -> delivered") : Serial.println(" -> failed");
+}
