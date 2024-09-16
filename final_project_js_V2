@@ -1,0 +1,194 @@
+var MongoClient = require('mongodb').MongoClient;
+// var url = "mongodb://localhost:27017/";  // "mongodb://localhost:27017/iotstack";
+var express = require('express');
+var mqtt = require('mqtt');
+const mongoose = require("mongoose");
+const bodyParser = require('body-parser');
+const url = "mongodb+srv://sanmojay:P4twyaINhvzuv6kO@insyg.fdygz.mongodb.net/?retryWrites=true&w=majority&appName=insyg";
+
+let db, col, col1;
+const app = express();
+var host = process.env.IP || 'localhost';
+var port = process.env.PORT || 8000;
+var staticSite = __dirname + '/public';
+
+mongoose.set('bufferCommands', false);
+ 
+app.use(bodyParser.json());
+app.use(express.json());
+
+const Joi = require('joi');
+
+const profileSchema = Joi.object({
+    name: Joi.string().required(),
+    birthday: Joi.date().required(),
+    weight: Joi.number().required(),
+    height: Joi.number().required(),
+    gender: Joi.string().valid('male', 'female', 'other').required()
+});
+
+app.post('/saveProfile', async (req, res) => {
+  const { weight, height, gender } = req.body;
+
+  // Validate the required fields
+  if (!weight || !height || !gender) {
+    console.error('Validation failed:', req.body);
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
+  try {
+    // Insert data into the collection
+    const result = await col1.insertOne({ weight, height, gender });
+    console.log('Profile data saved:', result);
+    res.status(200).json({ message: 'Profile saved successfully' });
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    res.status(500).json({ message: 'Failed to save profile' });
+  }
+});
+
+
+const userProfileSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  birthday: { type: Date, required: true },
+  weight: { type: Number, required: true },
+  height: { type: Number, required: true },
+  gender: { type: String, required: true }
+});
+
+const UserProfile = mongoose.model('UserProfile', userProfileSchema);
+
+
+
+// Express middleware to serve static files
+app.use(express.static(staticSite));
+
+// Middleware to ensure MongoDB collection is initialized
+function ensureMongoCollectionInitialized(req, res, next) {
+  if (!col) {
+    return res.status(500).send("MongoDB collection not initialized.");
+  }
+  next();
+}
+
+// MongoDB Initialization
+async function initializeMongoDB() {
+  try {
+    const client = await MongoClient.connect(url);
+    console.info("Connected to MongoDB Atlas");
+    db = client.db("try");
+    col = db.collection("t+h");
+    col1 = db.collection("Userinfo");
+    console.info("Collection initialized:", col != null);
+  } catch (err) {
+    console.error("Error connecting to MongoDB:", err);
+    throw err;
+  }
+}
+
+// MQTT Initialization
+function initializeMQTT() {
+  const client = mqtt.connect('ws://192.168.1.12:9001/mqtt');
+  console.log("Nodejs Server Started!");
+
+  client.on('connect', function () {
+    console.log("Connected to MQTT broker");
+    client.subscribe('jaysanmo/codettes/01', function (err) {
+      if (err) {
+        console.error("Failed to subscribe to MQTT topic:", err);
+      } else {
+        console.log("Subscribed to MQTT topic");
+      }
+    });
+  });
+
+  client.on('message', function (topic, message) {
+    console.log("Received raw message from MQTT:", message.toString());
+    json_check(message);
+  });
+}
+
+// Call the initialization functions
+initializeMongoDB().then(() => {
+  initializeMQTT();
+
+  // API route to get temperature and humidity data
+  app.get('/api/thdata', ensureMongoCollectionInitialized, async (req, res) => {
+    try {
+      const documents = await col.find({}).sort({ _id: -1 }).toArray();
+      res.json(documents);
+    } catch (err) {
+      console.error("Error fetching t+h data from MongoDB:", err);
+      res.status(500).send("Error fetching data from MongoDB");
+    }
+  });
+
+}).catch(err => {
+  console.error("Initialization failed:", err);
+});
+
+// JSON checking and inserting into MongoDB
+function json_check(data) {
+  console.log("json_check called with data:", data.toString());
+  try {
+    var msg = JSON.parse(data.toString());
+    console.log("Parsed JSON message:", msg);
+    var msgobj = {
+      temperature: msg.temp,
+      //humidity: msg.humid,
+      spO2: msg.spo2,
+      heartbeat: msg.HB,
+      timestamp: new Date() // Optional: Add a timestamp field if it's not in the message
+    };
+    Mongo_insert(msgobj).then(() => {
+      console.log("Message inserted successfully");
+    }).catch(err => {
+      console.error("Failed to insert message:", err);
+    });
+  } catch (e) {
+    console.error("Error parsing JSON:", e);  // Log the error details
+    console.log("Message could not be parsed as JSON:", data.toString());
+    return false;
+  }
+}
+
+// Function to insert data into MongoDB Atlas
+async function Mongo_insert(msgobj) {
+  console.log("Mongo_insert called with:", msgobj);  // Log the object to be inserted
+  if (col) {
+    try {
+      const result = await col.insertOne(msgobj);
+      console.log("Message inserted into MongoDB Atlas:", result.insertedId);
+    } catch (err) {
+      console.error("Failed to insert message into MongoDB:", err);
+      throw err;
+    }
+  } else {
+    console.error("MongoDB collection not initialized.");
+  }
+}
+
+app.listen(port, host, () => {
+  console.log(`Server running at http://${host}:${port}/`);
+});
+
+
+
+// ENABLE CORS for Express (so swagger.io and external sites can use it remotely .. SECURE IT LATER!!)
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+// ROUTES FOR OUR API
+// =============================================================================
+var router = express.Router();              // get an instance of the express Router
+
+app.use('/', express.static(staticSite));
+// Use router for all /api requests
+
+if (!process.env.C9_PID) {
+  console.log('Running at http://' + host + ':' + port);
+}
+app.listen(port, function () { console.log('Listening') });
