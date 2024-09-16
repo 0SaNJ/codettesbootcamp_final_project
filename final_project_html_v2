@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!--=============== CSS ===============-->
+    <link rel="stylesheet" href="css/style.css">
+    <title>Insyg</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="js/mqttws31.js" type="text/javascript"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/config.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        </style>
+    </head>
+
+    <body>
+        <div class="navbar">
+            <div class="brand-title">Insyg</div>
+            <button class="toggle-button" id="toggle-button">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+        </div>
+        <div class="profile-sidebar" id="profile-sidebar">
+            <button class="close-button" id="close-button">&times;</button>
+            <div class="profile-details">
+                <img src="img/image.jpg">
+                <h2>Jay Sanmohadi</h2>
+                <p>Email: sanmojay@gmail.com</p>
+                <p>Phone: +597 864-3340</p>
+                <button>Edit Profile</button>
+                <h2>User Profile</h2>
+                <div class="input-box">
+                    <label style="color: white;" for="age">Age:</label>
+                    <form id="userForm">
+                        <label for="birthday">Select your birthday:</label>
+                        <input type="date" id="birthday" name="birthday" required>
+                      
+                        <button type="submit">Submit</button>
+                      </form>
+                      
+                      <div id="output"></div>
+                      
+                </div>
+                <div class="input-box">
+                    <label style="color: white;" for="gender">Gender:</label>
+                    <select style="background-color: #eb7a33;" id="gender" name="gender">
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="input-box">
+                    <label style="color: white;" for="weight">Weight (kg):</label>
+                    <input style="background-color: #eb7a33;" type="number" id="weight" name="height"
+                        placeholder="Enter your weight in kilograms">
+                </div>
+
+                <div class="input-box">
+                    <label style="color: white;" for="height">Height (cm):</label>
+                    <input style="background-color: #eb7a33;" type="number" id="height" name="height"
+                        placeholder="Enter your height in centimeters">
+                </div>
+                <button id="update-profile" onclick="calculateBMI()">Calculate BMI</button>
+                <div style="color: white;" id="result"></div>
+                <div style="color: white;" id="history"></div>
+                <!-- Button to redirect to "chart for meter" -->
+                <!--<button id="chart-meter-button">Chart for Meter</button> -->
+            </div>
+        </div>
+        <div class="container">
+            <form name="chartform" id="date-form">
+            </form>
+            </main>
+            <div class="diagnosis-history">
+                <div class="H3">
+                    <p>DHT11 Sensor</p>
+                </div>
+                <div class="history-container">
+                    <!--<ul style="color:#dd5e0e" class="timeline">
+                    <li>Humidity Sensing</li>
+                    <li>Temperature Sensing</li>
+                </ul> -->
+                    <div class="body-image">
+                        <img src="img/humid_temp.png">
+                    </div>
+                </div>
+            </div>
+            <div class="info-container">
+                <div class="analog-container">
+                    <!-- Potentiometer Analog Box -->
+                    <h2 style="color: #dd5e0e;">
+                        <span class="widget-value deviceId-data">O2</span>
+                    </h2>
+                    <span style="color: #dd5e0e;" class="widget-value spO2-data">25°C</span>
+                </div>
+                <div class="chart-container" id="chart1-container"></div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="diagnosis-history">
+                <div class="H3">
+                    <p>Pulse Sensor</p>
+                </div>
+                <div class="history-container">
+                    <!-- <ul style="color:#69bf64" class="timeline">
+                        <li>2022</li>
+                        <li>2021</li>
+                        <li>2020</li>
+                        <li>2019</li>
+                        <li>2018</li>
+                        <li>2017</li>
+                        <li>2016</li>
+                        <li>2015</li>
+                        <li>2014</li>
+                    </ul> -->
+                    <div class="body-image">
+                        <img src="img/Pulse.png">
+                    </div>
+                </div>
+            </div>
+            <div class="info-container">
+                <div class="analog-container">
+                    <!-- Potentiometer Analog Box -->
+                    <h2 style="color: #dd5e0e;">
+                        <span class="widget-value deviceId-data">HeartBeat</span>
+                    </h2>
+                    <span style="color: #dd5e0e;" class="widget-value HB-data">25°C</span>
+                </div>
+                <div class="chart-container" id="chart2-container"></div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="info-container">
+                <div id="thdata">Loading data...</div>
+            </div>
+            <div class="info-container">
+                <div id="pulsedata">Loading data...</div>
+            </div>
+        </div>
+    </body>
+
+    </html>
+
+
+    <script type="text/javascript">
+
+        async function loadTHData() {
+            try {
+                const response = await fetch('/api/thdata');
+                const data = await response.json();
+                const thdataDiv = document.getElementById('thdata');
+
+                thdataDiv.innerHTML = '';
+                data.forEach(record => {
+                    const div = document.createElement('div');
+                    div.className = 'record';
+                    div.innerHTML = `<strong>ID:</strong> ${record._id} <br> 
+                       <strong>Temperature:</strong> ${record.temperature} °C <br> 
+                       <strong>O2:</strong> ${record.spO2} % <br>
+                       <strong>Timestamp:</strong> ${new Date(record.timestamp).toLocaleString()}`;
+                    thdataDiv.appendChild(div);
+                });
+            } catch (err) {
+                document.getElementById('thdata').innerHTML = 'Failed to load data';
+                console.error("Error loading t+h data:", err);
+            }
+        }
+
+        async function loadPulseData() {
+            try {
+                const response = await fetch('/api/thdata');
+                const data = await response.json();
+                const pulsedataDiv = document.getElementById('pulsedata');
+
+                pulsedataDiv.innerHTML = '';
+                data.forEach(record => {
+                    const div = document.createElement('div');
+                    div.className = 'record';
+                    div.innerHTML = `<strong>ID:</strong> ${record._id} <br> 
+                       <strong>Heartbeat:</strong> ${record.heartbeat} <br>
+                       <strong>Timestamp:</strong> ${new Date(record.timestamp).toLocaleString()}`;
+                    pulsedataDiv.appendChild(div);
+                });
+            } catch (err) {
+                document.getElementById('pulsedata').innerHTML = 'Failed to load data';
+                console.error("Error loading t+h data:", err);
+            }
+        }
+
+
+        // Load data when the page is loaded
+        loadTHData();
+        loadPulseData();
+
+        var chart;
+        var mqtt;
+
+        //var topic = "farmwise/node01/sensors/data"; // Specify the topic here //
+        var topic = "jaysanmo/codettes/01"; // Specify the topic here //
+
+        var responseObject = {}; // define responseObject variable
+        var reconnectTimeout = 2000;
+
+
+        function MQTTconnect() {
+            if (typeof path == "undefined") {
+                path = '/mqtt';
+            }
+            mqtt = new Paho.MQTT.Client(
+                host,
+                port,
+                path,
+                "web_" + parseInt(Math.random() * 100, 10)
+            );
+            var options = {
+                timeout: 3,
+                useSSL: useTLS,
+                cleanSession: cleansession,
+                onSuccess: onConnect,
+                onFailure: function (message) {
+                    $('#status').val("Connection failed: " + message.errorMessage + "Retrying");
+                    setTimeout(MQTTconnect, reconnectTimeout);
+                }
+            };
+
+            mqtt.onConnectionLost = onConnectionLost;
+            mqtt.onMessageArrived = onMessageArrived;
+
+            if (username != null) {
+                options.userName = username;
+                options.password = password;
+            }
+            console.log("Host=" + host + ", port=" + port + ", path=" + path + " TLS = " + useTLS + " username=" + username + " password=" + password);
+            mqtt.connect(options);
+        }
+        function onConnect() {
+
+
+            $('#status').val('Connected to ' + host + ':' + port + path);
+            // Connection succeeded; subscribe to our topic
+            mqtt.subscribe(topic, { qos: 0 });
+            $('#topic2').val(topic);
+
+            // Set up chart
+            chart = Highcharts.chart('chart1-container', {
+                chart: {
+                    type: 'line',
+                    turboThreshold: 0, // set to 0 to disable thresholding and display all points
+                    scrollablePlotArea: {
+                        minWidth: 600,
+                        scrollPositionX: 1
+                    }
+                },
+                title: {
+                    text: 'Sensor Data'
+                },
+                xAxis: {
+                    type: 'datetime',
+                    title: {
+                        text: 'Timestamp'
+                    }
+                },
+                yAxis: [{
+                    title: {
+                        text: 'Temperature'
+                    }
+                }],
+                series: [{
+                    name: 'tempAr1',
+                    data: []
+                }]
+            });
+            chart2 = Highcharts.chart('chart2-container', {
+                chart: {
+                    type: 'line',
+                    turboThreshold: 0, // set to 0 to disable thresholding and display all points
+                    scrollablePlotArea: {
+                        minWidth: 600,
+                        scrollPositionX: 1
+                    }
+                },
+                title: {
+                    text: 'Heartbeat Data over Time',
+                    style: {
+                        color: '#00000'
+                    }
+                },
+                xAxis: {
+                    type: 'datetime', // Use linear type for the x-axis
+                    title: {
+                        text: 'Time',
+                        style: {
+                            color: '#00000'
+                        }
+                    }
+                },
+                yAxis: {
+                    title: {
+                        text: 'Heartbeat',
+                        style: {
+                            color: '#00000'
+                        }
+                    },
+                },
+                series: [{
+                    name: 'Heartbeat',
+                    data: [], // Your heartbeat data here
+                    color: '#FF0000'
+                }]
+            });
+        }
+
+        function onConnectionLost(responseObject) {
+            setTimeout(MQTTconnect, reconnectTimeout);
+            $('#status').val("Connection lost: " + responseObject.errorMessage + ". Reconnecting");
+        }
+
+        const deviceContainers = {};
+
+        function onMessageArrived(message) {
+            console.log("Message arrived: " + message.payloadString);
+            try {
+                var data = JSON.parse(message.payloadString);
+                // Extract data from the payload
+                var deviceId = data.deviceId;
+                var temp = parseFloat(data.temp);
+                console.log('temp value: ' + temp); // Debugging line
+                var timestamp = new Date().getTime(); // Use current time as the timestamp
+                var spo2 = parseFloat(data.spo2);
+                console.log('spo2 value' + spo2)
+                var timestamp = new Date().getTime();
+                var HB = parseFloat(data.HB);
+                console.log('HB value' + HB)
+                var timestamp = new Date().getTime();
+                // Update the widget values
+                $('.spO2-data').text(spo2);
+                $('.temp-data').text(temp + '°C');
+                $('.HB-data').text(HB);
+
+                // Add the new data points to the chart series
+                if (chart) {
+                    chart.series[0].addPoint([timestamp, temp], true, false); // Add tempAr1 to the first series
+                    chart2.series[0].addPoint([timestamp, HB], true, false); // Add tempAr1 to the first series
+                    //chart.series[1].addPoint([timestamp, humid], true, false); // Add tempAr1 to the first series
+                }
+            } catch (error) {
+                console.error("Error parsing message payload:", error);
+            }
+        }
+
+
+
+        $(document).ready(function () {
+            MQTTconnect();
+        });
+
+        /* function fetchData(start, end) {
+          console.log('fetchData called with start:', start, 'end:', end);
+          //const url = `/data/chart-data?start=${start.toISOString()}&end=${end.toISOString()}`; 
+          const url = '/data/chart-data?start=2024-02-06T00:00:00.000Z&end=2024-02-08T00:00:00.000Z';
+          console.log('fetchData url:', url);
+          fetch(url)
+            .then(response => response.json())
+            .then(data => {
+              console.log('fetchData data:', data);
+              const chartData = data.map((obj) => ({
+               // x: new Date(obj.msg.timestamp).getTime(),
+               //y: [obj.msg.temp, obj.msg.humid, obj.msg.soil,obj.msg.tempCelsius, obj.msg.salt, obj.msg.light, obj.msg.batt],
+                x: new Date(obj.timestamp).getTime(),
+                y: [obj.temp, obj.humid, obj.soil, obj.salt, obj.light, obj.batt],
+              }));
+              console.log('fetchData chartData:', chartData);
+              chart.series[0].setData(chartData.map(obj => [obj.x, obj.y[0]]));
+              chart.series[1].setData(chartData.map(obj => [obj.x, obj.y[1]]));
+              chart.series[2].setData(chartData.map(obj => [obj.x, obj.y[2]]));
+              chart.series[3].setData(chartData.map(obj => [obj.x, obj.y[3]]));
+              chart.series[4].setData(chartData.map(obj => [obj.x, obj.y[4]]));
+              chart.series[5].setData(chartData.map(obj => [obj.x, obj.y[5]]));
+              chart.series[6].setData(chartData.map(obj => [obj.x, obj.y[6]]));
+            })
+            .catch(error => console.error(error));
+        } */
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            const start = new Date(document.getElementById('start-date').value);
+            const end = new Date(document.getElementById('end-date').value);
+            console.log(start, end);
+            fetchData(start, end);
+        }
+
+        const myform = document.getElementById('date-form');
+        myform.addEventListener('submit', handleSubmit);
+
+        document.addEventListener('DOMContentLoaded', () => {
+    const toggleButton = document.getElementById('toggle-button');
+    const profileSidebar = document.getElementById('profile-sidebar');
+    const closeButton = document.getElementById('close-button');
+
+    toggleButton.addEventListener('click', () => {
+        profileSidebar.classList.toggle('active');
+    });
+
+    closeButton.addEventListener('click', () => {
+        profileSidebar.classList.remove('active');
+    });
+
+    // Function to update indicator width based on data
+    function updateIndicatorWidth(boxId, value) {
+        const indicator = document.getElementById(`indicator-${boxId}`);
+        indicator.style.width = (value * 10) + '%'; // Assuming value is between 0 and 10
+    }
+
+    // Retrieve saved profile data from localStorage
+    const savedProfileData = JSON.parse(localStorage.getItem('userProfile'));
+
+    // Populate input fields with saved profile data
+    if (savedProfileData) {
+        document.getElementById('birthday').value = savedProfileData.birthday || ''; // Use 'birthday' instead of 'age'
+        document.getElementById('weight').value = savedProfileData.weight || '';
+        document.getElementById('height').value = savedProfileData.height || '';
+        document.getElementById('gender').value = savedProfileData.gender || '';
+    }
+
+    // Event listener for profile updates
+    document.getElementById('update-profile').addEventListener('click', () => {
+        const profileData = {
+            weight: document.getElementById('weight').value,
+            height: document.getElementById('height').value,
+            gender: document.getElementById('gender').value
+        };
+
+        // Validate data before sending
+        if (!profileData.weight || !profileData.height || !profileData.gender) {
+            displayDiagnosis('Please fill out all required fields.');
+            return;
+        }
+
+        fetch('/saveProfile', {
+            method: 'POST',
+            body: JSON.stringify(profileData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to save profile');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Profile saved:', data);
+            displayDiagnosis('Profile successfully saved!');
+        })
+        .catch(error => {
+            console.error('Error saving profile:', error);
+            displayDiagnosis('Error saving profile: ' + error.message);
+        });
+    });
+
+    function displayDiagnosis(text) {
+        const diagnosisBody = document.getElementById('update-profile');
+        diagnosisBody.innerHTML = text;
+        diagnosisBody.style.display = 'block';
+    }
+});
+
+
+
+
+        function calculateBMI() {
+            var height = parseFloat(document.getElementById('height').value);
+            var weight = parseFloat(document.getElementById('weight').value);
+
+            if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
+                var bmi = weight / ((height / 100) * (height / 100));
+                document.getElementById('result').innerHTML = 'Your BMI is: ' + bmi.toFixed(2);
+                addToHistory(height, weight, bmi.toFixed(2));
+            } else {
+                document.getElementById('result').innerHTML = 'Please enter valid height and weight.';
+            }
+        }
+
+        function addToHistory(height, weight, bmi) {
+            var historyDiv = document.getElementById('history');
+            var newItem = document.createElement('div');
+            newItem.innerHTML = '<strong>Height:</strong> ' + height + 'cm, <strong>Weight:</strong> ' + weight + 'kg, <strong>BMI:</strong> ' + bmi;
+            historyDiv.appendChild(newItem);
+        }
+
+        document.getElementById('userForm').addEventListener('submit', function(event) {
+  event.preventDefault();  // Prevent form from submitting to the server
+  
+  // Get the selected birthday
+  const birthday = new Date(document.getElementById('birthday').value);
+  const today = new Date();
+
+  // Calculate age based on birthday
+  let age = today.getFullYear() - birthday.getFullYear();
+  const monthDifference = today.getMonth() - birthday.getMonth();
+  
+  // Adjust the age if the birthday hasn't occurred yet this year
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthday.getDate())) {
+    age--;
+  }
+
+  // Display the calculated age
+  document.getElementById('output').innerText = `Your age is: ${age} years old`;
+});
+
+
+
+    </script>
+
+    <!--    <div>
+      <div>Subscribed to <input type='text' id='topic2' disabled />
+        Status: <input type='text' id='status' size="10" disabled /></div>
+        <ul id='ws'"></ul>
+        </div>-->
+    <!-- Bootstrap JS -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>-->
+    </section>
+
+    <!--=============== ABOUT ===============-->
+
+
+    <!--=============== SKILLS ===============-->
+
+
+    <!--=============== PORTFOLIO ===============-->
+
+    <!--=============== CONTACTME ===============-->
+
+    </main>
+
+
+    <!--=============== MAIN JS ===============-->
+    <script src="assets/js/main.js"></script>
+</body>
+
+</html>
